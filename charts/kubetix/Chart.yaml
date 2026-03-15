@@ -1,0 +1,20 @@
+apiVersion: v2
+name: kubetix
+description: A Helm chart for deploying KubeTix - Temporary Kubernetes Access Manager
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubernetes
+  - kubeconfig
+  - security
+  - access
+  - temporary
+home: https://github.com/joryirving/KubeTix
+sources:
+  - https://github.com/joryirving/KubeTix
+maintainers:
+  - name: Jory Irving
+    email: jory@joryirving.com
+
+icon: https://raw.githubusercontent.com/joryirving/KubeTix/main/logo.png

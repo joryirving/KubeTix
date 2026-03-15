@@ -1,0 +1,31 @@
+Thank you for installing {{ .Chart.Name }}.
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  Your application can be accessed at: https://{{ $host.host }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.database.postgresql.enabled }}
+Database is deployed with Bitnami PostgreSQL chart.
+To access the database:
+
+  $ kubectl port-forward svc/{{ .Release.Name }}-postgresql 5432:5432
+  $ psql -U {{ .Values.database.postgresql.auth.username }} -d {{ .Values.database.postgresql.auth.database }}
+{{- end }}
+
+{{- if .Values.oidc.enabled }}
+OIDC is enabled. Configure your OIDC provider with:
+  - Issuer: {{ .Values.oidc.issuer }}
+  - Client ID: {{ .Values.oidc.clientId }}
+  - Redirect URI: {{ .Values.oidc.redirectUri }}
+{{- end }}
+
+For more information, visit: https://github.com/joryirving/KubeTix

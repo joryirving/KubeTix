@@ -1,0 +1,171 @@
+# Default values for KubeTix.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/joryirving/kubetix-api
+  pullPolicy: Always
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: kubetix.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: kubetix-tls
+      hosts:
+        - kubetix.example.com
+
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "500m"
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Database configuration
+database:
+  # Use external database or Bitnami PostgreSQL
+  external:
+    enabled: false
+    host: ""
+    port: 5432
+    database: kubetix
+    username: kubetix
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: ""
+  
+  # Bitnami PostgreSQL
+  postgresql:
+    enabled: true
+    auth:
+      username: kubetix
+      password: kubetix
+      database: kubetix
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+# OIDC/Authentik configuration
+oidc:
+  enabled: false
+  issuer: ""
+  clientId: ""
+  clientSecret: ""
+  redirectUri: ""
+  scopes:
+    - openid
+    - profile
+    - email
+
+# Kubeconfig access (optional)
+kubeconfig:
+  # Mount existing kubeconfig from secret
+  existingSecret: ""
+  # Or use default cluster config
+  default: false
+
+# Environment variables
+env: {}
+  # API_URL: http://kubetix-api:8000
+  # MAX_GRANT_HOURS: "720"
+  # DEFAULT_GRANT_HOURS: "24"
+
+# Custom annotations for pods
+podAnnotations: {}
+
+# Custom labels for resources
+customLabels: {}
+
+# Additional volumes
+volumes: []
+
+# Additional volume mounts
+volumeMounts: []
+
+# Liveness probe
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Readiness probe
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Startup probe
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
