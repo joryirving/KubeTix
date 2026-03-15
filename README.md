@@ -119,6 +119,8 @@ Visit http://localhost:3000 to access the dashboard.
 - [x] Web UI dashboard (in `kubetix-web/`)
 - [x] Backend API (in `kubetix-api/`)
 - [x] Team features (multiple users, SSO)
+- [x] Helm chart for K8s deployment
+- [x] Self-hosted OIDC (Authentik, Keycloak, Okta)
 - [ ] Cloud provider integrations (EKS/GKE/AKS)
 - [ ] Slack/Teams bot integration
 - [x] Docker container support
