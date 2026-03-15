@@ -79,6 +79,36 @@ python3 test_kc_share.py -v
 python3 test_integration.py -v
 ```
 
+## 🐳 Docker
+
+### Build and Run
+
+```bash
+# Build the image
+docker build -t kubetix .
+
+# Run with your kubeconfig
+docker run -v ~/.kube:/root/.kube:ro -v kubetix_data:/root/.kc-share kubetix list
+```
+
+### Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+## 🌐 Web UI
+
+The web dashboard is in the `kubetix-web/` directory:
+
+```bash
+cd kubetix-web
+npm install
+npm run dev
+```
+
+Visit http://localhost:3000 to access the dashboard.
+
 ## 📚 Documentation
 
 - [SPEC.md](SPEC.md) - Project specification
@@ -86,11 +116,11 @@ python3 test_integration.py -v
 
 ## 🛣️ Roadmap
 
-- [ ] Web UI dashboard
+- [x] Web UI dashboard (in `kubetix-web/`)
 - [ ] Cloud provider integrations (EKS/GKE/AKS)
 - [ ] Slack/Teams bot integration
 - [ ] Team features (multiple users, SSO)
-- [ ] Docker container support
+- [x] Docker container support
 - [ ] API endpoints for automation
 
 ## 🤝 Contributing

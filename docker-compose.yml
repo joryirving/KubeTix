@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  kubetix:
+    build: .
+    volumes:
+      - ~/.kube:/root/.kube:ro
+      - kubetix_data:/root/.kc-share
+    environment:
+      - KC_SHARE_KEY=${KC_SHARE_KEY:-}
+    command: ["--help"]
+
+volumes:
+  kubetix_data:
