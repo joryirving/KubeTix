@@ -52,13 +52,17 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kubetix.databaseSecretName" . }}
+                  name: {{ include "kubetix.fullname" . }}
                   key: database-url
             - name: KUBETIX_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kubetix.secretName" . }}
+                  name: {{ include "kubetix.fullname" . }}
                   key: secret-key
+            {{- if .Values.database.sqlite.enabled }}
+            - name: DATA_DIR
+              value: /app/data
+            {{- end }}
             {{- if .Values.oidc.enabled }}
             - name: OIDC_ENABLED
               value: "true"
@@ -81,9 +85,19 @@ spec:
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.database.sqlite.enabled }}
+          - name: data
+            mountPath: /app/data
+          {{- end }}
       {{- with .Values.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.database.sqlite.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "kubetix.fullname" . }}-data
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:

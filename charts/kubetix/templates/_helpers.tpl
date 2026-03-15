@@ -80,3 +80,16 @@ Create the name of the OIDC secret
 {{- printf "%s-oidc" (include "kubetix.fullname" .) }}
 {{- end }}
 {{- end }}
+
+{{/*
+Generate database URL for PostgreSQL
+*/}}
+{{- define "kubetix.databaseUrl" -}}
+{{- $secret := lookup "v1" "Secret" .Release.Namespace .Values.database.postgresql.existingSecret }}
+{{- if $secret }}
+{{- $key := .Values.database.postgresql.existingSecretPasswordKey | default "database-url" }}
+{{- index $secret.data $key | b64dec }}
+{{- else }}
+{{- fail "Existing secret not found" }}
+{{- end }}
+{{- end }}

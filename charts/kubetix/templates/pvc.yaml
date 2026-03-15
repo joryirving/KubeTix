@@ -1,0 +1,17 @@
+{{- if .Values.database.sqlite.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "kubetix.fullname" . }}-data
+  labels:
+    {{- include "kubetix.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.database.sqlite.persistence.size }}
+  {{- with .Values.database.sqlite.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}

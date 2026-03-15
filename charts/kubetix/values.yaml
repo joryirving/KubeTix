@@ -74,9 +74,16 @@ affinity: {}
 
 # Database configuration
 database:
-  # Use external database (required - no bundled database)
-  external:
+  # SQLite (default - simple, no external dependencies)
+  sqlite:
     enabled: true
+    persistence:
+      enabled: true
+      size: 1Gi
+  
+  # PostgreSQL (production recommended)
+  postgresql:
+    enabled: false
     host: ""
     port: 5432
     database: kubetix

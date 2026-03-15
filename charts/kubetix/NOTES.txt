@@ -13,12 +13,22 @@ To learn more about the release, try:
 {{- end }}
 {{- end }}
 
-{{- if .Values.database.external.enabled }}
-Database connection configured. To test connectivity:
+{{- if .Values.database.sqlite.enabled }}
+SQLite database configured with persistent storage.
+Database file will be stored at: /app/data/kubetix.db
+
+To access the database:
+
+  $ kubectl exec -it deployment/{{ .Release.Name }} --namespace {{ .Release.Namespace }} -- bash
+  $ sqlite3 /app/data/kubetix.db
+  $ .tables
+  $ SELECT * FROM grants;
+{{- else if .Values.database.postgresql.enabled }}
+PostgreSQL database configured. To test connectivity:
 
   $ kubectl run db-test --rm -it --image=postgres:15-alpine --restart=Never \
     --namespace {{ .Release.Namespace }} \
-    -- psql -h {{ .Values.database.external.host }} -U {{ .Values.database.external.username }} -d {{ .Values.database.external.database }}
+    -- psql -h {{ .Values.database.postgresql.host }} -U {{ .Values.database.postgresql.username }} -d {{ .Values.database.postgresql.database }}
 {{- end }}
 
 {{- if .Values.oidc.enabled }}

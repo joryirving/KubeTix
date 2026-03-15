@@ -11,24 +11,25 @@ Helm chart for deploying KubeTix - Temporary Kubernetes Access Manager.
 
 ## Install
 
+### Quick Start (SQLite - Default)
+
 ```bash
-# Add repository
-helm repo add kubetix https://joryirving.github.io/kubetix-helm
-helm repo update
+# Install with SQLite (simple, persistent storage)
+helm install kubetix kubetix/kubetix \
+  --namespace kubetix \
+  --create-namespace
+```
 
-# Install with external database (required)
+### Production (PostgreSQL)
+
+```bash
+# Install with PostgreSQL
 helm install kubetix kubetix/kubetix \
   --namespace kubetix \
   --create-namespace \
-  --set database.external.enabled=true \
-  --set database.external.host=<your-db-host> \
-  --set database.external.password=<secure-password>
-
-# Install with custom values
-helm install kubetix kubetix/kubetix \
-  --namespace kubetix \
-  --create-namespace \
-  --set ingress.hosts[0].host=kubetix.example.com
+  --set database.postgresql.enabled=true \
+  --set database.postgresql.host=<your-db-host> \
+  --set database.postgresql.password=<secure-password>
 ```
 
 ## Uninstall
@@ -56,7 +57,11 @@ The following table lists the configurable parameters of the KubeTix chart and t
 | `autoscaling.enabled` | Enable HPA | `false` |
 | `autoscaling.minReplicas` | Minimum replicas | `1` |
 | `autoscaling.maxReplicas` | Maximum replicas | `5` |
-| `database.external.enabled` | Use external DB | `true` (required) |
+| `database.sqlite.enabled` | Use SQLite (default) | `true` |
+| `database.sqlite.persistence.size` | SQLite storage size | `1Gi` |
+| `database.postgresql.enabled` | Use PostgreSQL | `false` |
+| `database.postgresql.host` | PostgreSQL host | `""` |
+| `database.postgresql.password` | PostgreSQL password | `""` |
 | `oidc.enabled` | Enable OIDC | `false` |
 | `oidc.issuer` | OIDC issuer URL | `""` |
 | `oidc.clientId` | OIDC client ID | `""` |
@@ -64,25 +69,48 @@ The following table lists the configurable parameters of the KubeTix chart and t
 
 ### Database Configuration
 
-**External database is required.** KubeTix does not bundle a database.
+KubeTix supports SQLite (default) and PostgreSQL.
 
-#### External Database
+#### SQLite (Default - Quick Start)
+
+SQLite is enabled by default for easy setup. Data is persisted to a PVC.
 
 ```bash
+# Install with SQLite (default)
+helm install kubetix kubetix/kubetix \
+  --namespace kubetix \
+  --create-namespace
+```
+
+**Pros:**
+- ✅ No external dependencies
+- ✅ Quick setup
+- ✅ Persistent storage included
+- ✅ Perfect for development/testing
+
+**Cons:**
+- ❌ Not recommended for production
+- ❌ No connection pooling
+- ❌ Limited concurrent access
+
+#### PostgreSQL (Production Recommended)
+
+```bash
+# Install with PostgreSQL
 helm install kubetix kubetix/kubetix \
   --namespace kubetix \
   --create-namespace \
-  --set database.external.enabled=true \
-  --set database.external.host=external-db.example.com \
-  --set database.external.username=kubetix \
-  --set database.external.password=secret \
-  --set database.external.database=kubetix
+  --set database.postgresql.enabled=true \
+  --set database.postgresql.host=postgres.example.com \
+  --set database.postgresql.password=<secure-password> \
+  --set database.postgresql.username=kubetix \
+  --set database.postgresql.database=kubetix
 ```
 
-#### Using Existing Secret
+#### Using Existing PostgreSQL Secret
 
 ```bash
-# Create secret with database credentials
+# Create secret with database URL
 kubectl create secret generic kubetix-db \
   --namespace kubetix \
   --from-literal=database-url=postgresql://user:pass@host:5432/kubetix
@@ -90,9 +118,9 @@ kubectl create secret generic kubetix-db \
 # Install with existing secret
 helm install kubetix kubetix/kubetix \
   --namespace kubetix \
-  --set database.external.enabled=true \
-  --set database.external.existingSecret=kubetix-db \
-  --set database.external.existingSecretPasswordKey=database-url
+  --set database.postgresql.enabled=true \
+  --set database.postgresql.existingSecret=kubetix-db \
+  --set database.postgresql.existingSecretPasswordKey=database-url
 ```
 
 ### OIDC Configuration
