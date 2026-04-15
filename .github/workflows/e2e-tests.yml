@@ -36,7 +36,7 @@ jobs:
         version: v3.13.0
     
     - name: Install kubectl
-      uses: azure/setup-kubectl@v3
+      uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v5
       with:
         version: 'v1.28.0'
     
