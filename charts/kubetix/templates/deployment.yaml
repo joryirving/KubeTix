@@ -17,6 +17,16 @@ spec:
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled }}
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: {{ .Values.externalSecrets.vault.role | quote }}
+        vault.hashicorp.com/agent-inject-secret-db-config: {{ include "kubetix.vaultSecretPath" . }}
+        vault.hashicorp.com/agent-inject-template-encoding-db-config: json
+        {{- with .Values.externalSecrets.vault.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
       labels:
         {{- include "kubetix.selectorLabels" . | nindent 8 }}
         {{- with .Values.customLabels }}
@@ -52,12 +62,12 @@ spec:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kubetix.fullname" . }}
+                  name: {{ include "kubetix.secretName" . }}
                   key: database-url
             - name: KUBETIX_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kubetix.fullname" . }}
+                  name: {{ include "kubetix.secretName" . }}
                   key: secret-key
             {{- if .Values.database.sqlite.enabled }}
             - name: DATA_DIR
@@ -85,13 +95,20 @@ spec:
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.database.sqlite.enabled }}
-          - name: data
-            mountPath: /app/data
+          {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled }}
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /vault/secrets
+              readOnly: true
           {{- end }}
       {{- with .Values.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled }}
+      volumes:
+        - name: vault-secrets
+          emptyDir: {}
       {{- end }}
       {{- if .Values.database.sqlite.enabled }}
       volumes:

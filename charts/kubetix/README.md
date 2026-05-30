@@ -148,6 +148,57 @@ helm install kubetix kubetix/kubetix \
   --set autoscaling.targetCPUUtilizationPercentage=70
 ```
 
+### External Secrets Manager
+
+KubeTix supports external secrets managers for production deployments. When enabled, inline secret generation is disabled and secrets are fetched from an external provider instead.
+
+**Prerequisites:** The [External Secrets Operator](https://external-secrets.io/) must be installed in the cluster before enabling external secrets.
+
+#### HashiCorp Vault
+
+```bash
+# Install with Vault external secrets
+helm install kubetix kubetix/kubetix \
+  --namespace kubetix \
+  --create-namespace \
+  --set externalSecrets.enabled=true \
+  --set externalSecrets.vault.enabled=true \
+  --set externalSecrets.vault.address=https://vault.example.com:8200 \
+  --set externalSecrets.vault.role=kubetix \
+  --set externalSecrets.vault.secretPath=secret/data/kubetix
+```
+
+The Vault secret at `secret/data/kubetix` should contain keys `database-url` and `secret-key`. The chart uses the Vault Agent Injector sidecar to mount secrets into the pod.
+
+#### AWS Secrets Manager
+
+```bash
+# Install with AWS Secrets Manager
+helm install kubetix kubetix/kubetix \
+  --namespace kubetix \
+  --create-namespace \
+  --set externalSecrets.enabled=true \
+  --set externalSecrets.aws.enabled=true \
+  --set externalSecrets.aws.secretArn=arn:aws:secretsmanager:us-east-1:123456789012:secret:kubetix-abc123 \
+  --set externalSecrets.aws.region=us-east-1
+```
+
+The AWS secret should contain keys `database-url` and `secret-key`. Uses IAM role by default; configure `credentialsSecret` for static credentials.
+
+#### etcd Encryption
+
+For clusters with etcd encryption at rest configured, the secret can reference an existing encryption key:
+
+```bash
+# Install with etcd-encrypted secrets
+helm install kubetix kubetix/kubetix \
+  --namespace kubetix \
+  --create-namespace \
+  --set externalSecrets.enabled=true \
+  --set externalSecrets.etcd.enabled=true \
+  --set externalSecrets.etcd.secretName=kubetix-encryption-key
+```
+
 ## Values File
 
 See `values.yaml` for complete configuration options.
