@@ -59,7 +59,9 @@ jobs:
           --namespace kubetix \
           --create-namespace \
           --wait \
-          --timeout 10m
+          --timeout 10m \
+          --set database.sqlite.persistence.storageClass=local-hostpath \
+          --set image.tag=latest
     
     - name: Wait for API to be ready
       run: |
