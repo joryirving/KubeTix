@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Depends, status, Request
+from fastapi import FastAPI, HTTPException, Depends, status, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from passlib.context import CryptContext
