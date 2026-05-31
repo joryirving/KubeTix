@@ -129,6 +129,15 @@ volumes: []
 # Additional volume mounts
 volumeMounts: []
 
+# Additional volumes
+volumes: []
+
+# Extra volumes (merged with default volumes)
+extraVolumes: []
+
+# Extra volume mounts (merged with default volume mounts)
+extraVolumeMounts: []
+
 # Liveness probe
 livenessProbe:
   httpGet:
@@ -154,7 +163,7 @@ startupProbe:
   httpGet:
     path: /health
     port: http
-  initialDelaySeconds: 0
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 30
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 6
