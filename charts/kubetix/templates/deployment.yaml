@@ -91,30 +91,45 @@ spec:
             {{- with .Values.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-          {{- with .Values.volumeMounts }}
+          {{- if or .Values.volumeMounts .Values.database.sqlite.enabled .Values.extraVolumeMounts (and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled) }}
           volumeMounts:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled }}
-          volumeMounts:
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
+            {{- if .Values.database.sqlite.enabled }}
+            - name: data
+              mountPath: /app/data
+            {{- end }}
+            {{- if .Values.extraVolumeMounts }}
+            {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
+            {{- end }}
+            {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled }}
             - name: vault-secrets
               mountPath: /vault/secrets
               readOnly: true
+            {{- end }}
           {{- end }}
-      {{- with .Values.volumes }}
+      {{- if or .Values.volumes .Values.database.sqlite.enabled .Values.extraVolumes (and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled) }}
       volumes:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled }}
-      volumes:
-        - name: vault-secrets
-          emptyDir: {}
-      {{- end }}
-      {{- if .Values.database.sqlite.enabled }}
-      volumes:
+        {{- if and .Values.volumes .Values.database.sqlite.enabled }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "kubetix.fullname" . }}-data
+        {{- toYaml .Values.volumes | nindent 8 }}
+        {{- else if .Values.database.sqlite.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "kubetix.fullname" . }}-data
+        {{- else }}
+        {{- toYaml .Values.volumes | nindent 8 }}
+        {{- end }}
+        {{- if .Values.extraVolumes }}
+        {{- toYaml .Values.extraVolumes | nindent 8 }}
+        {{- end }}
+        {{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled }}
+        - name: vault-secrets
+          emptyDir: {}
+        {{- end }}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
