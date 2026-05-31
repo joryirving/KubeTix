@@ -20,6 +20,16 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import func
 
+# Rate limiting support
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    
+    HAS_RATE_LIMITING = True
+except ImportError:
+    HAS_RATE_LIMITING = False
+
 # Configuration
 SECRET_KEY = os.environ.get("KUBETIX_SECRET_KEY") or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"
@@ -38,6 +48,13 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# Rate limiter (initialized after app creation if slowapi is available)
+limiter = None
+if HAS_RATE_LIMITING:
+    limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # ---------------------------------------------------------------------------
 # CORS — locked to explicit origins (P0-1 fix)
 # ---------------------------------------------------------------------------
@@ -47,7 +64,6 @@ _CORS_ORIGINS_RAW = os.environ.get("KUBETIX_CORS_ORIGINS", "http://localhost:300
 ALLOWED_ORIGINS = [
     o.strip() for o in _CORS_ORIGINS_RAW.split(",") if o.strip()
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -399,7 +415,8 @@ async def startup_event():
 
 
 @app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5 per hour") if HAS_RATE_LIMITING else (lambda x: x)
+async def register_user(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     # Check if user exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
@@ -425,7 +442,8 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/login", response_model=Token)
-async def login(user_data: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10 per minute") if HAS_RATE_LIMITING else (lambda x: x)
+async def login(request: Request, user_data: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_data.email).first()
 
     # Guard: SSO-only users cannot log in with a password
@@ -475,7 +493,9 @@ async def list_grants(
 
 
 @app.post("/grants", response_model=GrantResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10 per hour") if HAS_RATE_LIMITING else (lambda x: x)
 async def create_grant(
+    request: Request,
     grant_data: GrantCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -852,7 +872,9 @@ async def list_team_members(
 # ---------------------------------------------------------------------------
 
 @app.post("/auth/sso/callback")
+@limiter.limit("5 per minute") if HAS_RATE_LIMITING else (lambda x: x)
 async def sso_callback(
+    request: Request,
     provider: str,
     code: str,
     db: Session = Depends(get_db)
@@ -1086,7 +1108,9 @@ async def sso_login(provider: str):
 
 
 @app.post("/auth/oidc/callback")
+@limiter.limit("5 per minute") if HAS_RATE_LIMITING else (lambda x: x)
 async def oidc_callback(
+    request: Request,
     code: str,
     db: Session = Depends(get_db)
 ):
