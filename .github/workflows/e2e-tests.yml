@@ -44,6 +44,11 @@ jobs:
       run: |
         kind create cluster --name kubetix-e2e
     
+    - name: Load image into Kind
+      run: |
+        docker pull ghcr.io/joryirving/kubetix-api:latest || true
+        kind load docker-image ghcr.io/joryirving/kubetix-api:latest --name kubetix-e2e || true
+    
     - name: Wait for nodes to be ready
       run: |
         kubectl wait --for=condition=Ready nodes --all --timeout=120s
@@ -54,7 +59,7 @@ jobs:
           --namespace kubetix \
           --create-namespace \
           --wait \
-          --timeout 5m
+          --timeout 10m
     
     - name: Wait for API to be ready
       run: |
