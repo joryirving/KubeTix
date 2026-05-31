@@ -168,7 +168,36 @@ helm install kubetix kubetix/kubetix \
   --set externalSecrets.vault.secretPath=secret/data/kubetix
 ```
 
-The Vault secret at `secret/data/kubetix` should contain keys `database-url` and `secret-key`. The chart uses the Vault Agent Injector sidecar to mount secrets into the pod.
+Before deploying, configure Vault:
+
+1. **Create the secret** in Vault at the configured path containing `database-url` and `secret-key`:
+   ```bash
+   vault kv put secret/data/kubetix \
+     database-url="postgresql://user:pass@host:5432/kubetix" \
+     secret-key="$(openssl rand -base64 32)"
+   ```
+
+2. **Enable Kubernetes auth** and create a role:
+   ```bash
+   vault auth enable kubernetes
+   vault write auth/kubernetes/config \
+     token_reviewer_jwt="<JWT>" \
+     kubernetes_host="https://kubernetes.default.svc"
+   vault write auth/kubernetes/role/kubetix \
+     bound_service_account_names=kubetix-kubetix \
+     bound_service_account_namespaces=kubetix \
+     policies=kubetix \
+     ttl=1h
+   ```
+
+3. **Grant Vault Agent annotations** on the ServiceAccount if using Vault Agent Injector:
+   ```bash
+   kubectl annotate serviceaccount kubetix-kubetix \
+     vault.hashicorp.com/agent-inject=true \
+     --namespace kubetix
+   ```
+
+The chart auto-creates a `ClusterSecretStore` (`<release>-vault-backend`) and an `ExternalSecret` resource. The Vault Agent Injector sidecar also mounts decrypted secrets at `/vault/secrets`.
 
 #### AWS Secrets Manager
 
@@ -183,21 +212,15 @@ helm install kubetix kubetix/kubetix \
   --set externalSecrets.aws.region=us-east-1
 ```
 
-The AWS secret should contain keys `database-url` and `secret-key`. Uses IAM role by default; configure `credentialsSecret` for static credentials.
+Before deploying, configure AWS:
 
-#### etcd Encryption
+1. **Create the secret** in AWS Secrets Manager with keys `database-url` and `secret-key`.
 
-For clusters with etcd encryption at rest configured, the secret can reference an existing encryption key:
+2. **Configure authentication**:
+   - **IAM role (default)**: Attach an IAM role to the EKS node pool or use IRSA on the ServiceAccount. The chart creates a `SecretStore` (`<release>-aws-backend`) that references the service account for JWT-based auth.
+   - **Static credentials**: Set `externalSecrets.aws.credentialsSecret` to an existing Kubernetes secret containing `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
-```bash
-# Install with etcd-encrypted secrets
-helm install kubetix kubetix/kubetix \
-  --namespace kubetix \
-  --create-namespace \
-  --set externalSecrets.enabled=true \
-  --set externalSecrets.etcd.enabled=true \
-  --set externalSecrets.etcd.secretName=kubetix-encryption-key
-```
+The chart auto-creates a `SecretStore` (`<release>-aws-backend`) and an `ExternalSecret` resource.
 
 ## Values File
 
