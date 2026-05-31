@@ -99,17 +99,17 @@ class TestKubeTixE2E:
         if os.path.exists(kubeconfig_path):
             os.unlink(kubeconfig_path)
     
-    def test_01_api_health(self, helm_install):
+    def test_01_api_health(self, wait_for_api):
         """Test API health endpoint."""
-        response = requests.get(f"{helm_install}/health")
+        response = requests.get(f"{wait_for_api}/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
     
-    def test_02_user_registration(self, helm_install):
+    def test_02_user_registration(self, wait_for_api):
         """Test user registration."""
         response = requests.post(
-            f"{helm_install}/users",
+            f"{wait_for_api}/users",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123",
@@ -123,11 +123,11 @@ class TestKubeTixE2E:
         assert "id" in data
         assert "created_at" in data
     
-    def test_03_user_login(self, helm_install):
+    def test_03_user_login(self, wait_for_api):
         """Test user login and JWT token."""
         # First register user
         requests.post(
-            f"{helm_install}/users",
+            f"{wait_for_api}/users",
             json={
                 "email": "login-test@example.com",
                 "password": "testpassword123"
@@ -136,7 +136,7 @@ class TestKubeTixE2E:
         
         # Login
         response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "login-test@example.com",
                 "password": "testpassword123"
@@ -149,11 +149,11 @@ class TestKubeTixE2E:
         assert "user" in data
         assert data["user"]["email"] == "login-test@example.com"
     
-    def test_04_create_grant(self, helm_install, kubeconfig):
+    def test_04_create_grant(self, wait_for_api, kubeconfig):
         """Test creating a grant."""
         # Login first
         login_response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123"
@@ -163,7 +163,7 @@ class TestKubeTixE2E:
         
         # Create grant
         response = requests.post(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             json={
                 "cluster_name": "test-cluster",
                 "namespace": "default",
@@ -181,11 +181,11 @@ class TestKubeTixE2E:
         assert "expires_at" in data
         assert not data["revoked"]
     
-    def test_05_list_grants(self, helm_install, kubeconfig):
+    def test_05_list_grants(self, wait_for_api, kubeconfig):
         """Test listing grants."""
         # Login first
         login_response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123"
@@ -195,7 +195,7 @@ class TestKubeTixE2E:
         
         # List grants
         response = requests.get(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 200
@@ -203,11 +203,11 @@ class TestKubeTixE2E:
         assert isinstance(grants, list)
         # Should have at least the grant from test_04
     
-    def test_06_download_grant(self, helm_install, kubeconfig):
+    def test_06_download_grant(self, wait_for_api, kubeconfig):
         """Test downloading a grant."""
         # Login first
         login_response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123"
@@ -217,7 +217,7 @@ class TestKubeTixE2E:
         
         # Create grant first
         create_response = requests.post(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             json={
                 "cluster_name": "download-test-cluster",
                 "namespace": "test-ns",
@@ -230,7 +230,7 @@ class TestKubeTixE2E:
         
         # Download grant
         response = requests.get(
-            f"{helm_install}/grants/{grant_id}/download",
+            f"{wait_for_api}/grants/{grant_id}/download",
             headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 200
@@ -241,11 +241,11 @@ class TestKubeTixE2E:
         assert "kubeconfig" in data
         assert len(data["kubeconfig"]) > 0
     
-    def test_07_revoke_grant(self, helm_install, kubeconfig):
+    def test_07_revoke_grant(self, wait_for_api, kubeconfig):
         """Test revoking a grant."""
         # Login first
         login_response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123"
@@ -255,7 +255,7 @@ class TestKubeTixE2E:
         
         # Create grant first
         create_response = requests.post(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             json={
                 "cluster_name": "revoke-test-cluster",
                 "namespace": "default",
@@ -268,24 +268,24 @@ class TestKubeTixE2E:
         
         # Revoke grant
         response = requests.delete(
-            f"{helm_install}/grants/{grant_id}",
+            f"{wait_for_api}/grants/{grant_id}",
             headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 204
         
         # Verify grant is revoked
         response = requests.get(
-            f"{helm_install}/grants/{grant_id}/download",
+            f"{wait_for_api}/grants/{grant_id}/download",
             headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 400
         assert "revoked" in response.json().get("detail", "").lower()
     
-    def test_08_audit_log(self, helm_install, kubeconfig):
+    def test_08_audit_log(self, wait_for_api, kubeconfig):
         """Test audit logging."""
         # Login first
         login_response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123"
@@ -295,7 +295,7 @@ class TestKubeTixE2E:
         
         # Get audit log
         response = requests.get(
-            f"{helm_install}/audit",
+            f"{wait_for_api}/audit",
             headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 200
@@ -303,25 +303,25 @@ class TestKubeTixE2E:
         assert isinstance(logs, list)
         # Should have audit entries from previous tests
     
-    def test_09_invalid_token(self, helm_install):
+    def test_09_invalid_token(self, wait_for_api):
         """Test invalid token handling."""
         response = requests.get(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             headers={"Authorization": "Bearer invalid-token"}
         )
         assert response.status_code == 401
     
-    def test_10_unauthorized_access(self, helm_install):
+    def test_10_unauthorized_access(self, wait_for_api):
         """Test unauthorized access to grants."""
         # Try to access without token
-        response = requests.get(f"{helm_install}/grants")
+        response = requests.get(f"{wait_for_api}/grants")
         assert response.status_code == 401
     
-    def test_11_grant_expiry_validation(self, helm_install, kubeconfig):
+    def test_11_grant_expiry_validation(self, wait_for_api, kubeconfig):
         """Test grant expiry validation."""
         # Login first
         login_response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123"
@@ -331,7 +331,7 @@ class TestKubeTixE2E:
         
         # Test invalid expiry (too short)
         response = requests.post(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             json={
                 "cluster_name": "test-cluster",
                 "expiry_hours": 0
@@ -342,7 +342,7 @@ class TestKubeTixE2E:
         
         # Test invalid expiry (too long)
         response = requests.post(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             json={
                 "cluster_name": "test-cluster",
                 "expiry_hours": 1000
@@ -351,11 +351,11 @@ class TestKubeTixE2E:
         )
         assert response.status_code == 400
     
-    def test_12_invalid_role(self, helm_install, kubeconfig):
+    def test_12_invalid_role(self, wait_for_api, kubeconfig):
         """Test invalid role validation."""
         # Login first
         login_response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123"
@@ -365,7 +365,7 @@ class TestKubeTixE2E:
         
         # Test invalid role
         response = requests.post(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             json={
                 "cluster_name": "test-cluster",
                 "role": "invalid-role"
@@ -374,11 +374,11 @@ class TestKubeTixE2E:
         )
         assert response.status_code == 400
     
-    def test_13_missing_kubeconfig(self, helm_install):
+    def test_13_missing_kubeconfig(self, wait_for_api):
         """Test behavior when kubeconfig is missing."""
         # Login first
         login_response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "test@example.com",
                 "password": "testpassword123"
@@ -389,7 +389,7 @@ class TestKubeTixE2E:
         # Try to create grant without kubeconfig
         # This should fail gracefully
         response = requests.post(
-            f"{helm_install}/grants",
+            f"{wait_for_api}/grants",
             json={
                 "cluster_name": "test-cluster",
                 "role": "view"
@@ -399,11 +399,11 @@ class TestKubeTixE2E:
         # May succeed or fail depending on setup
         # Just verify it doesn't crash
     
-    def test_14_duplicate_user_registration(self, helm_install):
+    def test_14_duplicate_user_registration(self, wait_for_api):
         """Test duplicate user registration handling."""
         # Register user
         requests.post(
-            f"{helm_install}/users",
+            f"{wait_for_api}/users",
             json={
                 "email": "duplicate@example.com",
                 "password": "testpassword123"
@@ -412,7 +412,7 @@ class TestKubeTixE2E:
         
         # Try to register again
         response = requests.post(
-            f"{helm_install}/users",
+            f"{wait_for_api}/users",
             json={
                 "email": "duplicate@example.com",
                 "password": "testpassword123"
@@ -421,11 +421,11 @@ class TestKubeTixE2E:
         assert response.status_code == 400
         assert "already registered" in response.json().get("detail", "").lower()
     
-    def test_15_wrong_password_login(self, helm_install):
+    def test_15_wrong_password_login(self, wait_for_api):
         """Test login with wrong password."""
         # Register user first
         requests.post(
-            f"{helm_install}/users",
+            f"{wait_for_api}/users",
             json={
                 "email": "wrongpass@example.com",
                 "password": "correctpassword"
@@ -434,7 +434,7 @@ class TestKubeTixE2E:
         
         # Try to login with wrong password
         response = requests.post(
-            f"{helm_install}/login",
+            f"{wait_for_api}/login",
             json={
                 "email": "wrongpass@example.com",
                 "password": "wrongpassword"
