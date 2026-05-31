@@ -9,6 +9,7 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
+    needs: build-and-publish
 
     steps:
     - name: Checkout code
@@ -40,28 +41,23 @@ jobs:
       with:
         version: 'v1.28.0'
 
-    - name: Build API image
-      if: github.event_name == 'pull_request'
-      run: |
-        docker build -t kubetix-api:pr-${{ github.sha }} ./kubetix-api
+    - name: Log in to GHCR
+      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Create Kind cluster and deploy
       env:
-        IMAGE_REPO: ${{ github.event_name == 'pull_request' && 'kubetix-api' || format('ghcr.io/{0}/kubetix-api', github.repository_owner) }}
-        IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.sha) || (github.event.pull_request.head.sha || github.sha) }}
-        PULL_POLICY: ${{ github.event_name == 'pull_request' && 'Never' || 'Always' }}
+        IMAGE_TAG: ${{ github.event.pull_request.head.sha || github.sha }}
       run: |
         kind create cluster --name kubetix-e2e
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          kind load docker-image $IMAGE_REPO:$IMAGE_TAG --name kubetix-e2e
-        fi
         kubectl wait --for=condition=Ready nodes --all --timeout=120s
         helm install kubetix-test ./charts/kubetix \
           --namespace kubetix \
           --create-namespace \
-          --set image.repository=$IMAGE_REPO \
-          --set image.tag=$IMAGE_TAG \
-          --set image.pullPolicy=$PULL_POLICY
+          --set image.tag=$IMAGE_TAG
 
     - name: Wait for API pod
       run: |
