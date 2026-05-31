@@ -40,29 +40,10 @@ jobs:
       with:
         version: 'v1.28.0'
     
-    - name: Create Kind cluster
-      run: |
-        kind create cluster --name kubetix-e2e
-    
-    - name: Build and load API image into Kind
+   - name: Build API image
       run: |
         docker build -t kubetix-api:kube-e2e ./kubetix-api
-        kind load docker-image kubetix-api:kube-e2e --name kubetix-e2e
-    
-    - name: Build and load API image into Kind
-      run: |
-        docker build -t kubetix-api:kube-e2e ./kubetix-api
-        kind load docker-image kubetix-api:kube-e2e --name kubetix-e2e
-    
-    - name: Wait for nodes to be ready
-      run: |
-        kubectl wait --for=condition=Ready nodes --all --timeout=120s
     
     - name: Run E2E tests
       run: |
         pytest tests/e2e/ -v --tb=short
-    
-    - name: Cleanup Kind cluster
-      if: always()
-      run: |
-        kind delete cluster --name kubetix-e2e
