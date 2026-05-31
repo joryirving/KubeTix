@@ -53,32 +53,6 @@ jobs:
       run: |
         kubectl wait --for=condition=Ready nodes --all --timeout=120s
     
-    - name: Install KubeTix Helm chart
-      run: |
-        helm install kubetix-test ./charts/kubetix \
-          --namespace kubetix \
-          --create-namespace \
-          --set image.repository=kubetix-api \
-          --set image.tag=kube-e2e \
-          --set image.pullPolicy=Never
-    
-    - name: Wait for API to be ready
-      run: |
-        for i in {1..24}; do
-          if kubectl get pods -n kubetix -l app.kubernetes.io/name=kubetix-api -o jsonpath='{.items[0].status.phase}' | grep -q Running; then
-            echo "API pod is running"
-            break
-          fi
-          sleep 5
-        done
-    
-    - name: Port forward API
-      run: |
-        kubectl port-forward -n kubetix svc/kubetix-api 8000:8000 &
-        PORTFORWARD_PID=$!
-        echo "PORTFORWARD_PID=$PORTFORWARD_PID" >> $GITHUB_ENV
-        sleep 10
-    
     - name: Run E2E tests
       run: |
         pytest tests/e2e/ -v --tb=short
@@ -87,6 +61,3 @@ jobs:
       if: always()
       run: |
         kind delete cluster --name kubetix-e2e
-        if [ -n "$PORTFORWARD_PID" ]; then
-          kill $PORTFORWARD_PID 2>/dev/null || true
-        fi

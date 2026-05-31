@@ -72,31 +72,8 @@ def wait_for_service_ready(url: str, timeout: int = 120):
 class TestKubeTixE2E:
     """End-to-end tests for KubeTix."""
     
-    @pytest.fixture(scope="class", autouse=True)
-    def kind_cluster(self):
-        """Setup and teardown kind cluster."""
-        # Create cluster
-        run_command([
-            "kind", "create", "cluster",
-            "--name", KIND_CLUSTER_NAME
-        ])
-        
-        # Wait for nodes to be ready
-        run_command([
-            "kubectl", "wait", "--for=condition=Ready", "nodes", "--all",
-            "--timeout=120s"
-        ])
-        
-        yield
-        
-        # Cleanup
-        run_command([
-            "kind", "delete", "cluster",
-            "--name", KIND_CLUSTER_NAME
-        ])
-    
     @pytest.fixture(scope="class")
-    def helm_install(self, kind_cluster):
+    def helm_install(self):
         """Install KubeTix using Helm."""
         # Install Helm chart
         run_command([
@@ -104,15 +81,16 @@ class TestKubeTixE2E:
             "./charts/kubetix",
             "--namespace", NAMESPACE,
             "--create-namespace",
-            "--wait",
-            "--timeout", "5m"
+            "--set", "image.repository=kubetix-api",
+            "--set", "image.tag=kube-e2e",
+            "--set", "image.pullPolicy=Never",
         ])
         
         # Wait for API pod to be ready
         wait_for_pod_ready(
             NAMESPACE,
             "app.kubernetes.io/name=kubetix",
-            timeout=180
+            timeout=300
         )
         
         # Port-forward API for testing
