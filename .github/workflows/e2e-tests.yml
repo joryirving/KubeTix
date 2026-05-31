@@ -58,8 +58,6 @@ jobs:
         helm install kubetix-test ./charts/kubetix \
           --namespace kubetix \
           --create-namespace \
-          --wait \
-          --timeout 10m \
           --set image.repository=kubetix-api \
           --set image.tag=kube-e2e \
           --set image.pullPolicy=Never
