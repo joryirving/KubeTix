@@ -129,6 +129,15 @@ volumes: []
 # Additional volume mounts
 volumeMounts: []
 
+# Additional volumes
+volumes: []
+
+# Extra volumes (merged with default volumes)
+extraVolumes: []
+
+# Extra volume mounts (merged with default volume mounts)
+extraVolumeMounts: []
+
 # Liveness probe
 livenessProbe:
   httpGet:

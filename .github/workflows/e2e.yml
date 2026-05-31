@@ -83,12 +83,27 @@ jobs:
       run: |
         kind create cluster --name kubetix-e2e
         kubectl wait --for=condition=Ready nodes --all --timeout=120s
+
+        # Extract kubeconfig for the API pod to use
+        kind get kubeconfig --name kubetix-e2e > /tmp/e2e-kubeconfig
+        kubectl create secret generic kubetix-kubeconfig \
+          --from-file=config=/tmp/e2e-kubeconfig \
+          --namespace kubetix \
+          --dry-run=client -o yaml | kubectl apply -f -
+
         helm install kubetix-test ./charts/kubetix \
           --namespace kubetix \
           --create-namespace \
           --set image.repository=ghcr.io/misospace/kubetix-api \
           --set image.tag=${{ github.sha }} \
           --set image.pullPolicy=Always \
+          --set env[0].name=KUBECONFIG \
+          --set env[0].value=/app/kubeconfig/config \
+          --set extraVolumes[0].name=kubeconfig \
+          --set extraVolumes[0].secret.secretName=kubetix-kubeconfig \
+          --set extraVolumeMounts[0].name=kubeconfig \
+          --set extraVolumeMounts[0].mountPath=/app/kubeconfig \
+          --set extraVolumeMounts[0].readOnly=true \
           --wait \
           --timeout 5m
 
