@@ -6,75 +6,61 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-    
+
     - name: Set up Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: '3.14'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest
-    
+        pip install pytest flake8 black bandit
+
     - name: Run unit tests
       run: |
         python3 test_kc_share.py -v
-    
+
     - name: Run integration tests
       run: |
         python3 test_integration.py -v
 
-  lint:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-    
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-      with:
-        python-version: '3.14'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 black
-    
     - name: Lint with flake8
       run: |
         flake8 kc-share.py --max-line-length=120 --ignore=E501,W503
-        echo "✅ Linting passed!"
-    
+
     - name: Check formatting with black
       run: |
         black --check kc-share.py
-        echo "✅ Formatting passed!"
 
-  security:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-    
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-      with:
-        python-version: '3.14'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install bandit
-    
     - name: Run security scan
       run: |
         bandit -r kc-share.py -ll
-        echo "✅ Security scan passed!"
+
+  helm-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Install Helm
+      uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5
+
+    - name: Lint Helm chart
+      run: |
+        helm lint ./charts/kubetix
+
+    - name: Template Helm chart
+      run: |
+        helm template kubetix-test ./charts/kubetix > /dev/null
