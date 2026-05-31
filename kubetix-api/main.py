@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from passlib.context import CryptContext
@@ -19,6 +19,16 @@ from sqlalchemy import create_engine, Column, String, Boolean, Text, DateTime, U
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import func
+
+# Rate limiting support
+try:
+    from slowapi import Limiter, _rate_limit_exceeded_handler
+    from slowapi.util import get_remote_address
+    from slowapi.errors import RateLimitExceeded
+    
+    HAS_RATE_LIMITING = True
+except ImportError:
+    HAS_RATE_LIMITING = False
 
 # Configuration
 SECRET_KEY = os.environ.get("KUBETIX_SECRET_KEY") or secrets.token_urlsafe(32)
@@ -37,6 +47,13 @@ app = FastAPI(
     description="Temporary Kubernetes Access Manager",
     version="0.1.0"
 )
+
+# Rate limiter (initialized after app creation if slowapi is available)
+limiter = None
+if HAS_RATE_LIMITING:
+    limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS
 app.add_middleware(
@@ -88,7 +105,7 @@ class TeamMember(Base):
     
     __table_args__ = (
         # Unique constraint: one role per user per team
-        db.UniqueConstraint('team_id', 'user_id', name='uq_team_user'),
+        UniqueConstraint('team_id', 'user_id', name='uq_team_user'),
     )
 
 
@@ -297,7 +314,8 @@ async def startup_event():
 
 
 @app.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5 per hour") if HAS_RATE_LIMITING else (lambda x: x)
+async def register_user(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
     # Check if user exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
@@ -323,7 +341,8 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/login", response_model=Token)
-async def login(user_data: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10 per minute") if HAS_RATE_LIMITING else (lambda x: x)
+async def login(request: Request, user_data: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_data.email).first()
     
     if not user or not verify_password(user_data.password, user.hashed_password):
@@ -365,7 +384,9 @@ async def list_grants(
 
 
 @app.post("/grants", response_model=GrantResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10 per hour") if HAS_RATE_LIMITING else (lambda x: x)
 async def create_grant(
+    request: Request,
     grant_data: GrantCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -733,7 +754,9 @@ async def list_team_members(
 
 # SSO/Authentik/OIDC Endpoints
 @app.post("/auth/sso/callback")
+@limiter.limit("5 per minute") if HAS_RATE_LIMITING else (lambda x: x)
 async def sso_callback(
+    request: Request,
     provider: str,
     code: str,
     db: Session = Depends(get_db)
@@ -779,7 +802,9 @@ async def sso_login(provider: str):
 
 
 @app.post("/auth/oidc/callback")
+@limiter.limit("5 per minute") if HAS_RATE_LIMITING else (lambda x: x)
 async def oidc_callback(
+    request: Request,
     code: str,
     db: Session = Depends(get_db)
 ):
