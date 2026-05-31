@@ -72,65 +72,14 @@ def wait_for_service_ready(url: str, timeout: int = 120):
 class TestKubeTixE2E:
     """End-to-end tests for KubeTix."""
     
-    @pytest.fixture(scope="class", autouse=True)
-    def kind_cluster(self):
-        """Setup and teardown kind cluster."""
-        # Create cluster
-        run_command([
-            "kind", "create", "cluster",
-            "--name", KIND_CLUSTER_NAME
-        ])
-        
-        # Wait for nodes to be ready
-        run_command([
-            "kubectl", "wait", "--for=condition=Ready", "nodes", "--all",
-            "--timeout=120s"
-        ])
-        
-        yield
-        
-        # Cleanup
-        run_command([
-            "kind", "delete", "cluster",
-            "--name", KIND_CLUSTER_NAME
-        ])
+   @pytest.fixture(scope="class", autouse=True)
+    def wait_for_api(self):
+        """Wait for the already-deployed API to be ready."""
+        wait_for_service_ready(API_URL, timeout=120)
+        yield API_URL
     
     @pytest.fixture(scope="class")
-    def helm_install(self, kind_cluster):
-        """Install KubeTix using Helm."""
-        # Install Helm chart
-        run_command([
-            "helm", "install", HELM_RELEASE_NAME,
-            "./charts/kubetix",
-            "--namespace", NAMESPACE,
-            "--create-namespace",
-            "--wait",
-            "--timeout", "5m"
-        ])
-        
-        # Wait for API pod to be ready
-        wait_for_pod_ready(
-            NAMESPACE,
-            "app.kubernetes.io/name=kubetix",
-            timeout=180
-        )
-        
-        # Port-forward API for testing
-        port_forward = subprocess.Popen([
-            "kubectl", "port-forward", "-n", NAMESPACE,
-            "svc/kubetix-api", "8000:8000"
-        ])
-        
-        try:
-            # Wait for API to be ready
-            wait_for_service_ready(API_URL, timeout=60)
-            yield API_URL
-        finally:
-            port_forward.terminate()
-            port_forward.wait()
-    
-    @pytest.fixture(scope="class")
-    def kubeconfig(self, helm_install):
+    def kubeconfig(self):
         """Generate test kubeconfig."""
         # Create temporary kubeconfig
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.kubeconfig') as f:
