@@ -78,7 +78,8 @@ users:
             cwd=Path(__file__).parent
         )
         
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 0,
+            f"create failed: stdout={result.stdout!r} stderr={result.stderr!r}")
         self.assertIn("Grant created!", result.stdout)
         self.assertIn("prod", result.stdout)
         self.assertIn("edit", result.stdout)
@@ -125,7 +126,8 @@ users:
             cwd=Path(__file__).parent
         )
         
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 0,
+            f"revoke failed: stdout={result.stdout!r} stderr={result.stderr!r} grant_id={grant_id!r}")
         self.assertIn("revoked", result.stdout)
     
     def test_cli_download_command(self):
@@ -193,10 +195,15 @@ class TestEdgeCases(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.test_db = Path(self.test_dir) / "test.sqlite"
         self.test_config = Path(self.test_dir) / "config.json"
+        self.test_kubeconfig = Path(self.test_dir) / "config"
         
         # Patch paths
         kc_share.DB_PATH = self.test_db
         kc_share.CONFIG_PATH = self.test_config
+        
+        # Create test kubeconfig
+        self.test_kubeconfig.write_text("apiVersion: v1\nkind: Config\nclusters: []\ncontexts: []\nusers: []")
+        os.environ["KUBECONFIG"] = str(self.test_kubeconfig)
         
         # Clean any existing database
         if self.test_db.exists():
@@ -207,6 +214,8 @@ class TestEdgeCases(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment"""
         shutil.rmtree(self.test_dir)
+        if "KUBECONFIG" in os.environ:
+            del os.environ["KUBECONFIG"]
     
     def test_grant_with_special_characters(self):
         """Test grant with special characters in cluster name"""
@@ -371,9 +380,13 @@ users:
         new_test_dir = tempfile.mkdtemp()
         new_db = Path(new_test_dir) / "test.sqlite"
         new_config = Path(new_test_dir) / "config.json"
+        new_kubeconfig = Path(new_test_dir) / "config"
         
         kc_share.DB_PATH = new_db
         kc_share.CONFIG_PATH = new_config
+        
+        new_kubeconfig.write_text("apiVersion: v1\nkind: Config\nclusters: []\ncontexts: []\nusers: []")
+        os.environ["KUBECONFIG"] = str(new_kubeconfig)
         
         if new_db.exists():
             new_db.unlink()
