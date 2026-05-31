@@ -334,20 +334,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 
 def get_current_user(
-    token: str = Depends(lambda: None),
+    authorization: str = Header(None),
     db: Session = Depends(get_db)
 ):
-    # Extract token from header
-    if token and token.startswith("Bearer "):
-        token = token[7:]
-
-    # Guard: reject missing or empty tokens before jwt.decode()
-    if not token:
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="No authentication token provided",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    token = authorization[7:]
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
