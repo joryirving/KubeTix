@@ -44,10 +44,10 @@ jobs:
       run: |
         kind create cluster --name kubetix-e2e
     
-    - name: Load image into Kind
+    - name: Build and load API image into Kind
       run: |
-        docker pull ghcr.io/joryirving/kubetix-api:latest || true
-        kind load docker-image ghcr.io/joryirving/kubetix-api:latest --name kubetix-e2e || true
+        docker build -t kubetix-api:kube-e2e ./kubetix-api
+        kind load docker-image kubetix-api:kube-e2e --name kubetix-e2e
     
     - name: Wait for nodes to be ready
       run: |
@@ -60,8 +60,10 @@ jobs:
           --create-namespace \
           --wait \
           --timeout 10m \
-          --set database.sqlite.persistence.storageClass=local-hostpath \
-          --set image.tag=latest
+          --set image.repository=kubetix-api \
+          --set image.tag=kube-e2e \
+          --set image.pullPolicy=Never \
+          --set database.sqlite.persistence.storageClass=standard
     
     - name: Wait for API to be ready
       run: |
