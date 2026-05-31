@@ -62,8 +62,7 @@ jobs:
           --timeout 10m \
           --set image.repository=kubetix-api \
           --set image.tag=kube-e2e \
-          --set image.pullPolicy=Never \
-          --set database.sqlite.persistence.storageClass=standard
+          --set image.pullPolicy=Never
     
     - name: Wait for API to be ready
       run: |
