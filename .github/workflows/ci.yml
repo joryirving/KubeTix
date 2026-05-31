@@ -58,7 +58,7 @@ jobs:
         black --check kc-share.py
         echo "✅ Formatting passed!"
 
-   security:
+  security:
     runs-on: ubuntu-latest
     
     steps:
