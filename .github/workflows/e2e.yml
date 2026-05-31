@@ -84,16 +84,17 @@ jobs:
         kind create cluster --name kubetix-e2e
         kubectl wait --for=condition=Ready nodes --all --timeout=120s
 
+        # Create namespace first, then set up kubeconfig secret
+        kubectl create namespace kubetix
+
         # Extract kubeconfig for the API pod to use
         kind get kubeconfig --name kubetix-e2e > /tmp/e2e-kubeconfig
         kubectl create secret generic kubetix-kubeconfig \
           --from-file=config=/tmp/e2e-kubeconfig \
-          --namespace kubetix \
-          --dry-run=client -o yaml | kubectl apply -f -
+          --namespace kubetix
 
         helm install kubetix-test ./charts/kubetix \
           --namespace kubetix \
-          --create-namespace \
           --set image.repository=ghcr.io/misospace/kubetix-api \
           --set image.tag=${{ github.sha }} \
           --set image.pullPolicy=Always \
