@@ -140,36 +140,36 @@ def _provision_user(db: Session, email: str, full_name: Optional[str],
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(String(36), primary_key=True, default=secrets.token_urlsafe(16))
+    id = Column(String(36), primary_key=True, default=lambda: secrets.token_urlsafe(16))
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=True)  # NULL for SSO users
     full_name = Column(String(255))
     is_admin = Column(Boolean, default=False)
     sso_provider = Column(String(50), nullable=True)  # google, github, okta, etc.
     sso_id = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Team(Base):
     __tablename__ = "teams"
 
-    id = Column(String(36), primary_key=True, default=secrets.token_urlsafe(16))
+    id = Column(String(36), primary_key=True, default=lambda: secrets.token_urlsafe(16))
     name = Column(String(255), nullable=False)
     description = Column(Text)
     created_by = Column(String(36), nullable=False)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class TeamMember(Base):
     __tablename__ = "team_members"
 
-    id = Column(String(36), primary_key=True, default=secrets.token_urlsafe(16))
+    id = Column(String(36), primary_key=True, default=lambda: secrets.token_urlsafe(16))
     team_id = Column(String(36), nullable=False)
     user_id = Column(String(36), nullable=False)
     role = Column(String(50), nullable=False)  # owner, admin, member
-    joined_at = Column(DateTime, default=datetime.now(timezone.utc))
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         # Unique constraint: one role per user per team
@@ -180,7 +180,7 @@ class TeamMember(Base):
 class Grant(Base):
     __tablename__ = "grants"
 
-    id = Column(String(36), primary_key=True, default=secrets.token_urlsafe(16))
+    id = Column(String(36), primary_key=True, default=lambda: secrets.token_urlsafe(16))
     user_id = Column(String(36), nullable=False)
     cluster_name = Column(String(255), nullable=False)
     namespace = Column(String(255), nullable=True)
@@ -188,19 +188,19 @@ class Grant(Base):
     encrypted_kubeconfig = Column(Text, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     revoked = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
 
-    id = Column(String(36), primary_key=True, default=secrets.token_urlsafe(16))
+    id = Column(String(36), primary_key=True, default=lambda: secrets.token_urlsafe(16))
     user_id = Column(String(36), nullable=False)
     grant_id = Column(String(36), nullable=True)
     action = Column(String(50), nullable=False)
     details = Column(Text)
-    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 # ---------------------------------------------------------------------------
