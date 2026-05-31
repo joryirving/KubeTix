@@ -54,6 +54,21 @@ def wait_for_pod_ready(namespace: str, label_selector: str, timeout: int = 300):
     raise TimeoutError(f"Pod not ready after {timeout}s")
 
 
+def request_with_diagnostics(method: str, url: str, **kwargs):
+    """Make a request and dump diagnostics on failure."""
+    import traceback
+    try:
+        response = requests.request(method, url, **kwargs)
+        if response.status_code >= 400:
+            print(f"\n[DIAG] {method} {url} -> {response.status_code}")
+            print(f"[DIAG] Response body: {response.text[:500]}")
+        return response
+    except requests.exceptions.RequestException as e:
+        print(f"\n[DIAG] {method} {url} -> Exception: {e}")
+        traceback.print_exc()
+        raise
+
+
 def wait_for_service_ready(url: str, timeout: int = 120):
     """Wait for API service to be ready."""
     start = time.time()
@@ -162,8 +177,8 @@ class TestKubeTixE2E:
         token = login_response.json()["access_token"]
         
         # Create grant
-        response = requests.post(
-            f"{wait_for_api}/grants",
+        response = request_with_diagnostics(
+            "POST", f"{wait_for_api}/grants",
             json={
                 "cluster_name": "test-cluster",
                 "namespace": "default",
@@ -172,7 +187,8 @@ class TestKubeTixE2E:
             },
             headers={"Authorization": f"Bearer {token}"}
         )
-        assert response.status_code == 201
+        assert response.status_code == 201, \
+            f"Create grant failed: {response.status_code} {response.text[:500]}"
         data = response.json()
         assert data["cluster_name"] == "test-cluster"
         assert data["namespace"] == "default"
@@ -216,8 +232,8 @@ class TestKubeTixE2E:
         token = login_response.json()["access_token"]
         
         # Create grant first
-        create_response = requests.post(
-            f"{wait_for_api}/grants",
+        create_response = request_with_diagnostics(
+            "POST", f"{wait_for_api}/grants",
             json={
                 "cluster_name": "download-test-cluster",
                 "namespace": "test-ns",
@@ -226,11 +242,13 @@ class TestKubeTixE2E:
             },
             headers={"Authorization": f"Bearer {token}"}
         )
+        assert create_response.status_code == 201, \
+            f"Create grant failed: {create_response.status_code} {create_response.text[:500]}"
         grant_id = create_response.json()["id"]
-        
+
         # Download grant
-        response = requests.get(
-            f"{wait_for_api}/grants/{grant_id}/download",
+        response = request_with_diagnostics(
+            "GET", f"{wait_for_api}/grants/{grant_id}/download",
             headers={"Authorization": f"Bearer {token}"}
         )
         assert response.status_code == 200
@@ -254,8 +272,8 @@ class TestKubeTixE2E:
         token = login_response.json()["access_token"]
         
         # Create grant first
-        create_response = requests.post(
-            f"{wait_for_api}/grants",
+        create_response = request_with_diagnostics(
+            "POST", f"{wait_for_api}/grants",
             json={
                 "cluster_name": "revoke-test-cluster",
                 "namespace": "default",
@@ -264,8 +282,10 @@ class TestKubeTixE2E:
             },
             headers={"Authorization": f"Bearer {token}"}
         )
+        assert create_response.status_code == 201, \
+            f"Create grant failed: {create_response.status_code} {create_response.text[:500]}"
         grant_id = create_response.json()["id"]
-        
+
         # Revoke grant
         response = requests.delete(
             f"{wait_for_api}/grants/{grant_id}",
