@@ -949,7 +949,7 @@ async def sso_callback(
         )
 
     token_data = resp.json()
-    access_token = token_data.get("access_token") or token_data.get("access_token")
+    access_token = token_data.get("access_token")
 
     if not access_token:
         raise HTTPException(
@@ -1036,7 +1036,7 @@ async def sso_login(provider: str):
             "scope": "user:email",
         },
         "okta": {
-            "auth_url": f"{os.environ.get('SSO_OKTA_ISSUER', '{your-okta-domain}')}/oauth2/v1/authorize",
+            "auth_url": f"{os.environ.get('SSO_OKTA_ISSUER', '{your-okta-domain}')}/oauth2/default/v1/authorize",
             "scope": "openid email profile",
         },
         "azure-ad": {
