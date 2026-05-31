@@ -35,27 +35,27 @@ pip install -r requirements.txt
 
 ```bash
 # Create 4-hour access to prod cluster
-python kc-share.py create --cluster prod --role edit --expiry 4
+python3 kc-share.py create --cluster prod --role edit --expiry 4
 
 # Create 1-hour access to specific namespace
-python kc-share.py create --cluster staging -n default --role view --expiry 1
+python3 kc-share.py create --cluster staging -n default --role view --expiry 1
 ```
 
 ### Share access
 
 ```bash
 # List active grants
-python kc-share.py list
+python3 kc-share.py list
 
 # Download temporary context
-python kc-share.py download <grant-id>
+python3 kc-share.py download <grant-id>
 ```
 
 ### Manage access
 
 ```bash
 # Revoke access immediately
-python kc-share.py revoke <grant-id>
+python3 kc-share.py revoke <grant-id>
 ```
 
 ## 🔒 Security
