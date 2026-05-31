@@ -468,7 +468,7 @@ async def list_grants(
     grants = db.query(Grant).filter(
         Grant.user_id == current_user.id,
         Grant.revoked == False,
-        Grant.expires_at > datetime.now(timezone.utc)
+        Grant.expires_at > datetime.now(timezone.utc).replace(tzinfo=None)
     ).order_by(Grant.created_at.desc()).all()
 
     return grants
@@ -566,7 +566,10 @@ async def download_grant(
             detail="Grant has been revoked"
         )
 
-    if datetime.now(timezone.utc) > grant.expires_at:
+    expires_at = grant.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc) > expires_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Grant has expired"
