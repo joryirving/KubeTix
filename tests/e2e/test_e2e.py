@@ -72,7 +72,7 @@ def wait_for_service_ready(url: str, timeout: int = 120):
 class TestKubeTixE2E:
     """End-to-end tests for KubeTix."""
     
-   @pytest.fixture(scope="class", autouse=True)
+    @pytest.fixture(scope="class", autouse=True)
     def wait_for_api(self):
         """Wait for the already-deployed API to be ready."""
         wait_for_service_ready(API_URL, timeout=120)
