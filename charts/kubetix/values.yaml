@@ -111,6 +111,56 @@ kubeconfig:
   # Or use default cluster config
   default: false
 
+# External secrets manager configuration
+# Supports Vault, AWS Secrets Manager, and etcd encryption
+externalSecrets:
+  # Enable external secrets management (disables inline secret generation)
+  enabled: false
+  
+  # HashiCorp Vault configuration
+  vault:
+    enabled: false
+    # Vault server address (e.g., https://vault.example.com:8200)
+    address: ""
+    # Kubernetes auth mount path
+    authPath: "kubernetes"
+    # Kubernetes auth role name
+    role: "kubetix"
+    # Namespace to read secrets from (default: default)
+    namespace: "default"
+    # Path to the secret in Vault (e.g., "secret/data/kubetix")
+    secretPath: "secret/data/kubetix"
+    # Annotations for the VaultAuthenticatingSecret resource
+    annotations: {}
+      # vault.hashicorp.com/agent-inject: "true"
+      # vault.hashicorp.com/role: "kubetix"
+  
+  # AWS Secrets Manager configuration
+  aws:
+    enabled: false
+    # Secret ARN or name (e.g., "arn:aws:secretsmanager:us-east-1:123456789012:secret:kubetix-abc123")
+    secretArn: ""
+    # Region (required if using AWS SM)
+    region: ""
+    # Use IAM role instead of static credentials
+    useIAMRole: true
+    # If not using IAM role, specify the secret name containing AWS credentials
+    credentialsSecret: ""
+    # Key for AWS access key ID in credentials secret
+    accessKeyIdKey: "AWS_ACCESS_KEY_ID"
+    # Key for AWS secret access key in credentials secret
+    secretAccessKeyKey: "AWS_SECRET_ACCESS_KEY"
+  
+  # etcd encryption configuration
+  etcd:
+    enabled: false
+    # Secret name containing the etcd encryption key
+    secretName: ""
+    # Key within the secret that holds the encryption key
+    key: "encryption-key"
+    # Encryption provider (aesgcm or aescbc)
+    provider: "aesgcm"
+
 # Environment variables
 env: {}
   # API_URL: http://kubetix-api:8000
@@ -128,6 +178,15 @@ volumes: []
 
 # Additional volume mounts
 volumeMounts: []
+
+# Additional volumes
+volumes: []
+
+# Extra volumes (merged with default volumes)
+extraVolumes: []
+
+# Extra volume mounts (merged with default volume mounts)
+extraVolumeMounts: []
 
 # Liveness probe
 livenessProbe:

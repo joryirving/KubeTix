@@ -78,7 +78,8 @@ users:
             cwd=Path(__file__).parent
         )
         
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 0,
+            f"create failed: stdout={result.stdout!r} stderr={result.stderr!r}")
         self.assertIn("Grant created!", result.stdout)
         self.assertIn("prod", result.stdout)
         self.assertIn("edit", result.stdout)
@@ -125,7 +126,8 @@ users:
             cwd=Path(__file__).parent
         )
         
-        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 0,
+            f"revoke failed: stdout={result.stdout!r} stderr={result.stderr!r} grant_id={grant_id!r}")
         self.assertIn("revoked", result.stdout)
     
     def test_cli_download_command(self):
