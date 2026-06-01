@@ -48,12 +48,14 @@ app = FastAPI(
     version="0.1.0"
 )
 
+
 # Rate limiter (initialized after app creation if slowapi is available)
 limiter = None
 if HAS_RATE_LIMITING:
     limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 # ---------------------------------------------------------------------------
 # CORS — locked to explicit origins (P0-1 fix)
@@ -64,6 +66,7 @@ _CORS_ORIGINS_RAW = os.environ.get("KUBETIX_CORS_ORIGINS", "http://localhost:300
 ALLOWED_ORIGINS = [
     o.strip() for o in _CORS_ORIGINS_RAW.split(",") if o.strip()
 ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -353,6 +356,7 @@ def get_current_user(
     authorization: str = Header(None),
     db: Session = Depends(get_db)
 ):
+    # Guard: reject missing or empty tokens before jwt.decode()
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
