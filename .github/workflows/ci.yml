@@ -6,10 +6,14 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v6.0.2
     
@@ -22,7 +26,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest
+        pip install pytest flake8 black bandit
     
     - name: Run unit tests
       run: |
@@ -51,12 +55,10 @@ jobs:
     - name: Lint with flake8
       run: |
         flake8 kc-share.py --max-line-length=120 --ignore=E501,W503
-        echo "✅ Linting passed!"
-    
+
     - name: Check formatting with black
       run: |
         black --check kc-share.py
-        echo "✅ Formatting passed!"
 
   security:
     runs-on: ubuntu-latest
@@ -77,4 +79,20 @@ jobs:
     - name: Run security scan
       run: |
         bandit -r kc-share.py -ll
-        echo "✅ Security scan passed!"
+
+  helm-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6.0.2
+
+    - name: Install Helm
+      uses: azure/setup-helm@v5.0.0
+
+    - name: Lint Helm chart
+      run: |
+        helm lint ./charts/kubetix
+
+    - name: Template Helm chart
+      run: |
+        helm template kubetix-test ./charts/kubetix > /dev/null

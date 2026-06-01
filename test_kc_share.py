@@ -89,6 +89,10 @@ class TestDatabase(unittest.TestCase):
     
     def test_grant_persistence(self):
         """Test that grants are persisted to database"""
+        test_kubeconfig = Path(self.test_dir) / "config"
+        test_kubeconfig.write_text("apiVersion: v1\nkind: Config\nclusters: []\ncontexts: []\nusers: []")
+        os.environ["KUBECONFIG"] = str(test_kubeconfig)
+
         grant_id = create_grant("test-cluster", "default", "view", 1)
         
         conn = get_connection()

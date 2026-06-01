@@ -148,6 +148,80 @@ helm install kubetix kubetix/kubetix \
   --set autoscaling.targetCPUUtilizationPercentage=70
 ```
 
+### External Secrets Manager
+
+KubeTix supports external secrets managers for production deployments. When enabled, inline secret generation is disabled and secrets are fetched from an external provider instead.
+
+**Prerequisites:** The [External Secrets Operator](https://external-secrets.io/) must be installed in the cluster before enabling external secrets.
+
+#### HashiCorp Vault
+
+```bash
+# Install with Vault external secrets
+helm install kubetix kubetix/kubetix \
+  --namespace kubetix \
+  --create-namespace \
+  --set externalSecrets.enabled=true \
+  --set externalSecrets.vault.enabled=true \
+  --set externalSecrets.vault.address=https://vault.example.com:8200 \
+  --set externalSecrets.vault.role=kubetix \
+  --set externalSecrets.vault.secretPath=secret/data/kubetix
+```
+
+Before deploying, configure Vault:
+
+1. **Create the secret** in Vault at the configured path containing `database-url` and `secret-key`:
+   ```bash
+   vault kv put secret/data/kubetix \
+     database-url="postgresql://user:pass@host:5432/kubetix" \
+     secret-key="$(openssl rand -base64 32)"
+   ```
+
+2. **Enable Kubernetes auth** and create a role:
+   ```bash
+   vault auth enable kubernetes
+   vault write auth/kubernetes/config \
+     token_reviewer_jwt="<JWT>" \
+     kubernetes_host="https://kubernetes.default.svc"
+   vault write auth/kubernetes/role/kubetix \
+     bound_service_account_names=kubetix-kubetix \
+     bound_service_account_namespaces=kubetix \
+     policies=kubetix \
+     ttl=1h
+   ```
+
+3. **Grant Vault Agent annotations** on the ServiceAccount if using Vault Agent Injector:
+   ```bash
+   kubectl annotate serviceaccount kubetix-kubetix \
+     vault.hashicorp.com/agent-inject=true \
+     --namespace kubetix
+   ```
+
+The chart auto-creates a `ClusterSecretStore` (`<release>-vault-backend`) and an `ExternalSecret` resource. The Vault Agent Injector sidecar also mounts decrypted secrets at `/vault/secrets`.
+
+#### AWS Secrets Manager
+
+```bash
+# Install with AWS Secrets Manager
+helm install kubetix kubetix/kubetix \
+  --namespace kubetix \
+  --create-namespace \
+  --set externalSecrets.enabled=true \
+  --set externalSecrets.aws.enabled=true \
+  --set externalSecrets.aws.secretArn=arn:aws:secretsmanager:us-east-1:123456789012:secret:kubetix-abc123 \
+  --set externalSecrets.aws.region=us-east-1
+```
+
+Before deploying, configure AWS:
+
+1. **Create the secret** in AWS Secrets Manager with keys `database-url` and `secret-key`.
+
+2. **Configure authentication**:
+   - **IAM role (default)**: Attach an IAM role to the EKS node pool or use IRSA on the ServiceAccount. The chart creates a `SecretStore` (`<release>-aws-backend`) that references the service account for JWT-based auth.
+   - **Static credentials**: Set `externalSecrets.aws.credentialsSecret` to an existing Kubernetes secret containing `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+
+The chart auto-creates a `SecretStore` (`<release>-aws-backend`) and an `ExternalSecret` resource.
+
 ## Values File
 
 See `values.yaml` for complete configuration options.

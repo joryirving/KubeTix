@@ -93,3 +93,32 @@ Generate database URL for PostgreSQL
 {{- fail "Existing secret not found" }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create the name of the secrets resource (inline or external).
+When externalSecrets are enabled, uses the appropriate external secret name.
+*/}}
+{{- define "kubetix.secretName" -}}
+{{- if .Values.externalSecrets.enabled }}
+  {{- if and .Values.externalSecrets.vault.enabled }}
+    {{- printf "%s-vault-secret" (include "kubetix.fullname" .) }}
+  {{- else if and .Values.externalSecrets.aws.enabled }}
+    {{- printf "%s-aws-secret" (include "kubetix.fullname" .) }}
+  {{- else }}
+    {{- include "kubetix.fullname" . }}
+  {{- end }}
+{{- else }}
+  {{- include "kubetix.fullname" . }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create the Vault secret path for external secrets.
+*/}}
+{{- define "kubetix.vaultSecretPath" -}}
+{{- if and .Values.externalSecrets.enabled .Values.externalSecrets.vault.enabled }}
+  {{- printf "%s/%s" .Values.externalSecrets.vault.namespace .Values.externalSecrets.vault.secretPath }}
+{{- else }}
+  ""
+{{- end }}
+{{- end }}
