@@ -15,27 +15,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
+    - uses: actions/checkout@v6.0.2
+    
     - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      uses: actions/setup-python@v6.2.0
       with:
         python-version: '3.14'
-
+    
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest flake8 black bandit
-
+    
     - name: Run unit tests
       run: |
         python3 test_kc_share.py -v
-
+    
     - name: Run integration tests
       run: |
         python3 test_integration.py -v
 
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v6.0.2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v6.2.0
+      with:
+        python-version: '3.14'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black
+    
     - name: Lint with flake8
       run: |
         flake8 kc-share.py --max-line-length=120 --ignore=E501,W503
@@ -44,6 +60,22 @@ jobs:
       run: |
         black --check kc-share.py
 
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v6.0.2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v6.2.0
+      with:
+        python-version: '3.14'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit
+    
     - name: Run security scan
       run: |
         bandit -r kc-share.py -ll
@@ -52,10 +84,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    - uses: actions/checkout@v6.0.2
 
     - name: Install Helm
-      uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5
+      uses: azure/setup-helm@v5.0.0
 
     - name: Lint Helm chart
       run: |
